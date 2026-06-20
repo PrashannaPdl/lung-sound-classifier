@@ -150,6 +150,22 @@
             analyzeBtn.disabled = true;
             analyzeBtn.textContent = "Processing...";
 
+            // --- NEW: DRAW GRAPHS LOCALLY USING WEB AUDIO API ---
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                // Create an audio context to decode the raw wav file
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+                const channelData = audioBuffer.getChannelData(0); // Use mono channel
+                
+                // Draw the visualizations
+                drawWaveform(channelData);
+                drawSpectrogram(channelData);
+            } catch(err) {
+                console.error("Error drawing local graphs:", err);
+            }
+            // ----------------------------------------------------
+
             // Prepare the file to be sent
             const formData = new FormData();
             formData.append("file", file);
@@ -192,6 +208,111 @@
             } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.textContent = "Diagnose";
+            }
+        }
+
+        // --- LOCAL GRAPH RENDERING FUNCTIONS ---
+
+        function drawWaveform(data) {
+            const canvas = document.getElementById('waveformCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#0072BD'; // MATLAB Blue
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            
+            const step = Math.ceil(data.length / canvas.width);
+            const amp = canvas.height / 2;
+            
+            for (let i = 0; i < canvas.width; i++) {
+                let min = 1.0, max = -1.0;
+                for (let j = 0; j < step; j++) {
+                    const val = data[i * step + j];
+                    if (val < min) min = val;
+                    if (val > max) max = val;
+                }
+                ctx.moveTo(i, amp * (1 - max));
+                ctx.lineTo(i, amp * (1 - min));
+            }
+            ctx.stroke();
+        }
+
+        // Mini Fast Fourier Transform (FFT) Algorithm
+        function doFFT(real, imag) {
+            const n = real.length;
+            if (n <= 1) return;
+            const half = n / 2;
+            const evenR = new Float32Array(half), evenI = new Float32Array(half);
+            const oddR = new Float32Array(half), oddI = new Float32Array(half);
+            for (let i = 0; i < half; i++) {
+                evenR[i] = real[i * 2]; evenI[i] = imag[i * 2];
+                oddR[i] = real[i * 2 + 1]; oddI[i] = imag[i * 2 + 1];
+            }
+            doFFT(evenR, evenI);
+            doFFT(oddR, oddI);
+            for (let k = 0; k < half; k++) {
+                const tAngle = -2 * Math.PI * k / n;
+                const tR = Math.cos(tAngle) * oddR[k] - Math.sin(tAngle) * oddI[k];
+                const tI = Math.sin(tAngle) * oddR[k] + Math.cos(tAngle) * oddI[k];
+                real[k] = evenR[k] + tR;
+                imag[k] = evenI[k] + tI;
+                real[k + half] = evenR[k] - tR;
+                imag[k + half] = evenI[k] - tI;
+            }
+        }
+
+        function drawSpectrogram(data) {
+            const canvas = document.getElementById('spectrogramCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Hide the "Awaiting analysis" text
+            const awaitingText = canvas.parentElement.querySelector('span');
+            if(awaitingText) awaitingText.style.display = 'none';
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const fftSize = 256;
+            const half = fftSize / 2;
+            
+            if (data.length < fftSize) return; 
+            
+            const step = Math.floor((data.length - fftSize) / w);
+            const rectHeight = h / half;
+            
+            // Simulate MATLAB's Jet Colormap
+            function getJetColor(v) {
+                v = Math.max(0, Math.min(1, v));
+                let r = Math.max(0, Math.min(255, 255 * (1.5 - Math.abs(1 - 4 * (v - 0.5)))));
+                let g = Math.max(0, Math.min(255, 255 * (1.5 - Math.abs(1 - 4 * (v - 0.25)))));
+                let b = Math.max(0, Math.min(255, 255 * (1.5 - Math.abs(1 - 4 * v))));
+                return `rgb(${r},${g},${b})`;
+            }
+
+            for (let x = 0; x < w; x++) {
+                const start = x * step;
+                const real = new Float32Array(fftSize);
+                const imag = new Float32Array(fftSize);
+                
+                // Apply Hanning window
+                for (let i = 0; i < fftSize; i++) {
+                    const multiplier = 0.5 * (1 - Math.cos(2 * Math.PI * i / (fftSize - 1)));
+                    real[i] = data[start + i] * multiplier;
+                }
+                
+                doFFT(real, imag);
+                
+                for (let y = 0; y < half; y++) {
+                    const magnitude = Math.sqrt(real[y]*real[y] + imag[y]*imag[y]);
+                    // Map intensity to log scale for visual contrast
+                    const val = (Math.log10(magnitude + 1e-4) + 4) / 4; 
+                    ctx.fillStyle = getJetColor(val);
+                    ctx.fillRect(x, h - (y * rectHeight) - rectHeight, 1, rectHeight + 0.5);
+                }
             }
         }
     </script>
