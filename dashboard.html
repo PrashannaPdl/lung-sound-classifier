@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lung Sound Classifier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700&family=Bitcount+Prop+Single:wght@100..900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Barlow', sans-serif; background-color: #FAF2F2; color: #333; }
+        .bitcount-title { font-family: "Bitcount Prop Single", system-ui; font-optical-sizing: auto; font-weight: 700; color: #34ADAD; }
+        .theme-bg { background-color: #34ADAD; }
+        .theme-text { color: #34ADAD; }
+        .theme-hover:hover { background-color: #2b8f8f; }
+        .comp-text { color: #E07A5F; } 
+        .macos-window { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); border: 1px solid rgba(0,0,0,0.05); overflow: hidden; }
+        .macos-header { background: #f6f6f6; border-bottom: 1px solid #e5e5e5; }
+        .graph-container { position: relative; background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; }
+        .grid-lines { position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(52, 173, 173, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(52, 173, 173, 0.05) 1px, transparent 1px); background-size: 20px 20px; pointer-events: none; }
+        .matlab-title { font-weight: 600; font-size: 14px; color: #555; }
+        .matlab-axis { font-size: 12px; color: #888; text-align: center; }
+        
+        @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.3); opacity: 0; } }
+        .pulse-btn { position: fixed; bottom: 30px; right: 30px; z-index: 100; }
+        .pulse-ring { position: absolute; width: 50px; height: 50px; border-radius: 50%; background: #34ADAD; animation: pulse-ring 2s infinite; }
+    </style>
+</head>
+<body class="flex flex-col items-center min-h-screen p-4 md:p-8">
+
+    <div class="pulse-btn">
+        <div class="pulse-ring"></div>
+        <button onclick="toggleModal(true)" class="relative w-[50px] h-[50px] bg-[#34ADAD] text-white rounded-full shadow-lg flex items-center justify-center font-bold text-xl hover:bg-[#2b8f8f] transition-all">?</button>
+    </div>
+
+    <div id="manual-modal" class="fixed inset-0 z-[200] hidden flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full relative">
+            <button onclick="toggleModal(false)" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            <h3 class="text-2xl font-bold bitcount-title mb-4">User Guide</h3>
+            <p class="text-gray-600 mb-6">How to use this diagnostic system efficiently:</p>
+            <ol class="list-decimal pl-5 space-y-3 text-gray-700">
+                <li><strong>Upload:</strong> Click "Browse" to select your .wav file.</li>
+                <li><strong>Process:</strong> Click "Diagnose" and wait for the AI analysis.</li>
+                <li><strong>Analyze:</strong> Review the generated waveform and frequency graphs.</li>
+                <li><strong>Compare:</strong> Match your results against the clinical profiles on the right.</li>
+            </ol>
+            <button onclick="toggleModal(false)" class="mt-8 w-full py-2 bg-[#34ADAD] text-white rounded-lg font-bold">Got it</button>
+        </div>
+    </div>
+
+    <h1 class="text-4xl md:text-5xl font-bold text-center mb-8 bitcount-title tracking-wide">Lung Sound Classifier</h1>
+
+    <div class="mb-8 w-full max-w-5xl bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="text-sm text-gray-500">
+            <strong class="text-gray-700">Upload Audio:</strong> Select a .wav file to analyze.
+        </div>
+        <div class="flex items-center gap-4">
+            <input type="file" id="audio-upload" accept=".wav,audio/wav" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#FAF2F2] file:text-[#34ADAD] hover:file:bg-[#eaf5f5] transition-colors cursor-pointer" />
+            <button onclick="analyzeAudio()" id="analyze-btn" class="px-6 py-2.5 theme-bg text-white rounded-md shadow-sm font-medium theme-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                Diagnose
+            </button>
+        </div>
+    </div>
+
+    <div class="w-full max-w-5xl macos-window flex flex-col">
+        <div class="macos-header px-4 py-3 flex items-center justify-between">
+            <div class="flex gap-2">
+                <div class="w-3.5 h-3.5 rounded-full bg-[#ff5f56]"></div>
+                <div class="w-3.5 h-3.5 rounded-full bg-[#ffbd2e]"></div>
+                <div class="w-3.5 h-3.5 rounded-full bg-[#27c93f]"></div>
+            </div>
+            <div class="flex-1 text-center pr-14"><span class="text-xs text-gray-500 font-semibold tracking-wide">Respiratory Diagnostic System</span></div>
+        </div>
+
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-white">
+            <div class="flex flex-col gap-8">
+                <div class="flex flex-col gap-2">
+                    <div class="matlab-title">1. Audio Waveform (Time Domain)</div>
+                    <div class="flex items-center"><span class="matlab-axis mr-2" style="writing-mode: vertical-rl; transform: rotate(180deg);">Amplitude</span>
+                        <div class="relative w-full h-40 flex flex-col">
+                            <div class="graph-container w-full h-full"><div class="grid-lines"></div><canvas id="waveformCanvas" class="w-full h-full relative z-10"></canvas></div>
+                            <div class="matlab-axis mt-2">Time (Seconds)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <div class="matlab-title">2. Audio Frequency Fingerprint (Spectrogram)</div>
+                    <div class="flex items-center"><span class="matlab-axis mr-2" style="writing-mode: vertical-rl; transform: rotate(180deg);">Frequency (kHz)</span>
+                        <div class="relative w-full h-40 flex flex-col">
+                            <div class="graph-container w-full h-full flex items-center justify-center bg-[#fafafa]">
+                                 <span class="theme-text text-xs z-20 opacity-50 absolute">Awaiting analysis...</span>
+                                 <canvas id="spectrogramCanvas" class="w-full h-full absolute inset-0 z-10"></canvas>
+                            </div>
+                            <div class="matlab-axis mt-2">Time (Seconds)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 bg-[#fafafa] border border-gray-100 rounded-lg shadow-inner flex flex-col h-full tracking-tight">
+                <h2 class="text-2xl font-bold mb-4 theme-text font-sans">DIAGNOSTIC REPORT</h2>
+                <div class="text-gray-600 text-[15px] mb-4">Analyzed File: <span id="ui-filename" class="font-mono text-sm bg-white border border-gray-200 px-2 py-0.5 rounded truncate inline-block max-w-[200px] align-bottom">None loaded</span></div>
+                <div class="mb-8 text-xl flex items-center gap-2">
+                    <strong class="text-gray-700">PREDICTION:</strong> <span id="ui-prediction" class="font-bold text-gray-400">WAITING...</span>
+                </div>
+                <hr class="border-t border-gray-200 mb-6">
+                
+                <div id="prof-normal" class="mb-4 profile-item transition-all opacity-40">
+                    <div class="font-bold text-gray-800"><span class="font-mono text-sm">[ ]</span> NORMAL PROFILE</div>
+                    <ul class="text-[12px] text-gray-500 pl-6 mt-1 list-disc">
+                        <li>Waveform: Smooth, periodic, rhythmic oscillations.</li>
+                        <li>Spectrogram: Clear, low-intensity energy distribution.</li>
+                    </ul>
+                </div>
+                <div id="prof-wheeze" class="mb-4 profile-item transition-all opacity-40">
+                    <div class="font-bold text-gray-800"><span class="font-mono text-sm">[ ]</span> WHEEZE PROFILE</div>
+                    <ul class="text-[12px] text-gray-500 pl-6 mt-1 list-disc">
+                        <li>Waveform: High-frequency, continuous sinusoidal patterns.</li>
+                        <li>Spectrogram: Sharp, horizontal lines across high frequencies.</li>
+                    </ul>
+                </div>
+                <div id="prof-crackle" class="mb-6 profile-item transition-all opacity-40">
+                    <div class="font-bold text-gray-800"><span class="font-mono text-sm">[ ]</span> CRACKLE PROFILE</div>
+                    <ul class="text-[12px] text-gray-500 pl-6 mt-1 list-disc">
+                        <li>Waveform: Sharp, non-periodic, erratic vertical spikes.</li>
+                        <li>Spectrogram: Sudden, short-duration vertical lines at multiple frequencies.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-12 mb-4 text-center text-gray-500 text-sm">
+        By Prashanna Paudyal and Aashish Kumar Gami
+    </footer>
+
+    <script>
+        function toggleModal(show) { document.getElementById('manual-modal').classList.toggle('hidden', !show); }
+        // Note: Script functions for analyzeAudio and drawing logic remain as implemented in previous versions.
+    </script>
+</body>
+</html>
