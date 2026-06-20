@@ -15,7 +15,6 @@
         .theme-bg { background-color: #34ADAD; }
         .theme-text { color: #34ADAD; }
         .theme-hover:hover { background-color: #2b8f8f; }
-        .comp-text { color: #E07A5F; } 
         .macos-window { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); border: 1px solid rgba(0,0,0,0.05); overflow: hidden; }
         .macos-header { background: #f6f6f6; border-bottom: 1px solid #e5e5e5; }
         .graph-container { position: relative; background-color: #ffffff; border: 1px solid #eaeaea; border-radius: 8px; overflow: hidden; }
@@ -39,12 +38,10 @@
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full relative">
             <button onclick="toggleModal(false)" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 font-bold">✕</button>
             <h3 class="text-2xl font-bold bitcount-title mb-4">User Guide</h3>
-            <p class="text-gray-600 mb-6">How to use this diagnostic system efficiently:</p>
+            <p class="text-gray-600 mb-6">How to use this diagnostic system:</p>
             <ol class="list-decimal pl-5 space-y-3 text-gray-700">
-                <li><strong>Upload:</strong> Click "Browse" to select your .wav file.</li>
+                <li><strong>Upload:</strong> Select your .wav file.</li>
                 <li><strong>Process:</strong> Click "Diagnose" and wait for the AI analysis.</li>
-                <li><strong>Analyze:</strong> Review the generated waveform and frequency graphs.</li>
-                <li><strong>Compare:</strong> Match your results against the clinical profiles on the right.</li>
             </ol>
             <button onclick="toggleModal(false)" class="mt-8 w-full py-2 bg-[#34ADAD] text-white rounded-lg font-bold">Got it</button>
         </div>
@@ -133,13 +130,70 @@
         </div>
     </div>
 
-    <footer class="mt-12 mb-4 text-center text-gray-500 text-sm">
-        By Prashanna Paudyal and Aashish Kumar Gami
-    </footer>
-
     <script>
         function toggleModal(show) { document.getElementById('manual-modal').classList.toggle('hidden', !show); }
-        // Note: Script functions for analyzeAudio and drawing logic remain as implemented in previous versions.
+        
+        async function analyzeAudio() {
+            const fileInput = document.getElementById('audio-upload');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const uiFilename = document.getElementById('ui-filename');
+            const uiPrediction = document.getElementById('ui-prediction');
+
+            if (fileInput.files.length === 0) {
+                alert("Please select a file first!");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            uiFilename.textContent = file.name;
+            uiPrediction.textContent = "COMMUNICATING WITH SERVER...";
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = "Processing...";
+
+            // Prepare the file to be sent
+            const formData = new FormData();
+            formData.append("file", file);
+
+            // Updated with your actual live Render URL
+            const RENDER_URL = "https://lung-sound-backend.onrender.com/predict";
+
+            try {
+                // Send the file to your FastAPI backend
+                const response = await fetch(RENDER_URL, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Server returned an error.");
+
+                // Read the JSON answer from the backend
+                const data = await response.json();
+                
+                // Update the UI with the prediction (Currently hardcoded to 'NORMAL' in main.py)
+                uiPrediction.textContent = data.prediction;
+                uiPrediction.classList.remove('text-gray-400');
+                uiPrediction.classList.add('text-[#34ADAD]');
+                
+                // Highlight the correct profile visually
+                document.querySelectorAll('.profile-item').forEach(el => el.classList.add('opacity-40'));
+                if(data.prediction === "NORMAL") {
+                    document.getElementById('prof-normal').classList.remove('opacity-40');
+                } else if(data.prediction === "WHEEZE") {
+                    document.getElementById('prof-wheeze').classList.remove('opacity-40');
+                } else if(data.prediction === "CRACKLE") {
+                    document.getElementById('prof-crackle').classList.remove('opacity-40');
+                }
+
+            } catch (error) {
+                console.error(error);
+                uiPrediction.textContent = "SERVER CONNECTION FAILED!";
+                uiPrediction.classList.remove('text-gray-400');
+                uiPrediction.classList.add('text-[#E07A5F]');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = "Diagnose";
+            }
+        }
     </script>
 </body>
 </html>
