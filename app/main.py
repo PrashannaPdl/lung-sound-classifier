@@ -93,7 +93,7 @@ def health_check():
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
     if model is None or scaler is None:
-        raise HTTPException(status_code=503, detail="Model is not loaded on the server.")
+        raise HTTPException(status_code=503, detail="Model is not loaded on the server. Check server logs.")
         
     if not file.filename.endswith('.wav'):
         raise HTTPException(status_code=400, detail="Only .wav files are supported")
