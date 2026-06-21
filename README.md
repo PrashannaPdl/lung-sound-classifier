@@ -1,37 +1,69 @@
-# 🫁 Lung Sound Classifier
+🫁 Lung Sound Classifier
 
-An intelligent respiratory diagnostic tool that listens to audio recordings of breathing and detects clinical anomalies. Built by Prashanna Paudyal and Aashish Kumar Gami.
+A full-stack diagnostic application designed to analyze lung sound recordings (.wav) and categorize them into clinical profiles: Normal, Wheeze, or Crackle.
 
-## 🧠 What It Is (The Layman Version)
-Think of this as a digital stethoscope powered by AI. You upload a recording of someone breathing, and the system instantly analyzes the sound waves. It acts as a screening tool to tell you if the breathing is **Normal**, or if it contains abnormal patterns like a **Wheeze** (often linked to asthma) or a **Crackle** (often linked to fluid in the lungs).
+This system uses digital signal processing (DSP) to extract audio features (MFCCs) and an SVM-based machine learning model for automated classification.
 
-## ⚙️ How It Works (The Technical Version)
-Behind the simple dashboard lies a robust machine learning and audio engineering pipeline:
+🌐 Try It Live
 
-* **Digital Signal Processing (DSP) & Heuristics:** Before the AI even looks at the file, the backend runs a sanity check. It measures the *Spectral Centroid* and *Zero-Crossing Rate* to filter out invalid audio. If you upload a song or speech, the system rejects it immediately to prevent false medical predictions.
-* **Feature Extraction (MFCCs):** The raw audio is passed through a *Bandpass Filter* (100–2000 Hz) to isolate respiratory frequencies. Then, we extract 13 *Mel-frequency cepstral coefficients (MFCCs)*, which mathematically represent the "acoustic fingerprint" of the patient's vocal tract and airways.
-* **Machine Learning Inference (SVM):** The extracted features are scaled and fed into a pre-trained *Support Vector Machine (SVM)*. This model plots the data in high-dimensional space to accurately classify the lung sound into its clinical profile.
+Access our live diagnostic dashboard here:
+👉 lungtest.paudyalprashanna.workers.dev
 
-## 🛠️ Tech Stack
-* **Frontend:** Pure HTML, JavaScript, and Tailwind CSS (Zero framework bloat, interactive canvas graphs).
-* **Backend:** Python and FastAPI (Lightning-fast API routing).
-* **Audio Processing:** Librosa and NumPy.
-* **Deployment:** Containerized via Docker and hosted live on Render.
+Simply upload a respiratory audio file and click "Diagnose" to see the AI in action! The system includes automatic invalid audio detection to reject background noise or speech.
 
-## 🚀 Quick Start Guide
+🏗️ Project Architecture
 
-### 1. Try the Live Demo
-Simply open `index.html` in your web browser. It is already wired to our live production backend!
+Frontend: A responsive web dashboard hosted on Cloudflare Workers/Pages, featuring real-time waveform and spectrogram visualization.
 
-### 2. Run the Backend Locally
-If you want to run the prediction server on your own machine:
+Backend: A FastAPI Python server hosted on Render, handling file processing and model inference.
 
-1. Clone the repository.
-2. Install the core dependencies:
-   `pip install -r requirements.txt`
-3. Spin up the FastAPI server:
-   `uvicorn app.main:app --reload`
-4. Open `dashboard.html`, change the `API_URL` variable to `http://localhost:8000/predict`, and start diagnosing.
+CI/CD: Automated deployment pipelines via GitHub Actions.
 
----
-*Disclaimer: This is an experimental machine learning project and is not a substitute for professional medical advice or clinical diagnosis.*
+⚙️ How It Works
+
+Upload: User uploads a .wav file through the dashboard.
+
+Process: The backend normalizes the audio (4410 Hz resample) and performs a Bandpass filter (100–2000 Hz).
+
+Analyze: The system runs a heuristic check (to filter out silence/music) and extracts Mel-frequency cepstral coefficients (MFCCs).
+
+Predict: The SVM model compares these features against trained profiles to generate a diagnosis.
+
+📂 Repository Structure
+
+/
+├── app/              # FastAPI backend logic (main.py)
+├── .github/          # CI/CD workflows for automated testing
+├── Dockerfile        # Container configuration for Render
+├── dashboard.html    # Frontend interactive dashboard
+├── requirements.txt  # Backend Python dependencies
+└── README.md         # Documentation
+
+
+🛠️ Setup & Development
+
+Local Development
+
+To run the project locally, ensure you have Python 3.9+ installed.
+
+Install Dependencies:
+
+pip install -r requirements.txt
+
+
+Run Backend:
+
+uvicorn app.main:app --reload
+
+
+Frontend: Open dashboard.html in any modern web browser. (Note: Update API_URL in the HTML file to http://localhost:8000/predict if testing locally).
+
+Deployment
+
+Frontend: Deployed globally via Cloudflare.
+
+Backend: Automatically built and deployed to Render using the provided Dockerfile.
+
+👨‍💻 Credits
+
+Built by Prashanna Paudyal and Aashish Kumar Gami.
