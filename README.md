@@ -6,8 +6,7 @@ This system uses digital signal processing (DSP) to extract audio features (MFCC
 
 🌐 Try It Live
 
-Access our live diagnostic dashboard here:
-👉 lungtest.paudyalprashanna.workers.dev
+Access our live diagnostic dashboard here: 👉 lungtest.paudyalprashanna.workers.dev
 
 Simply upload a respiratory audio file and click "Diagnose" to see the AI in action! The system includes automatic invalid audio detection to reject background noise or speech.
 
