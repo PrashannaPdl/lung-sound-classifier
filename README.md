@@ -21,7 +21,7 @@ Behind the simple dashboard lies a robust machine learning and audio engineering
 ## 🚀 Quick Start Guide
 
 ### 1. Try the Live Demo
-Simply open `dashboard.html` in your web browser. It is already wired to our live production backend!
+Simply open `index.html` in your web browser. It is already wired to our live production backend!
 
 ### 2. Run the Backend Locally
 If you want to run the prediction server on your own machine:
